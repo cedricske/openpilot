@@ -8,7 +8,6 @@ from selfdrive.car.interfaces import CarInterfaceBase
 
 EventName = car.CarEvent.EventName
 
-
 class CarInterface(CarInterfaceBase):
   @staticmethod
   def compute_gb(accel, speed):
@@ -28,18 +27,23 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.init('pid')
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
 
+    # Detect Zorro Steer Sensor, which is an aftermarket steering angle sensor
+    zss = 0x23 in fingerprint[0]
+
     if candidate == CAR.PRIUS:
       stop_and_go = True
       ret.safetyParam = 66  # see conversion factor for STEER_TORQUE_EPS in dbc file
       ret.wheelbase = 2.70
       ret.steerRatio = 15.74   # unknown end-to-end spec
       tire_stiffness_factor = 0.6371   # hand-tune
-      ret.mass = 3370. * CV.LB_TO_KG + STD_CARGO_KG
+      ret.mass = 3045. * CV.LB_TO_KG + STD_CARGO_KG
 
       ret.lateralTuning.init('indi')
       ret.lateralTuning.indi.innerLoopGain = 4.0
       ret.lateralTuning.indi.outerLoopGain = 3.0
-      ret.lateralTuning.indi.timeConstant = 0.1
+      ret.lateralTuning.indi.timeConstant = 1.0
+      if zss:
+         ret.lateralTuning.indi.timeConstant = 0.1
       ret.lateralTuning.indi.actuatorEffectiveness = 1.0
       ret.steerActuatorDelay = 0.5
 
@@ -122,7 +126,7 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.723], [0.0428]]
       ret.lateralTuning.pid.kf = 0.00006
 
-    elif candidate in [CAR.CAMRY, CAR.CAMRYH, CAR.CAMRY_TSS2]:
+    elif candidate in [CAR.CAMRY, CAR.CAMRYH]:
       stop_and_go = True
       ret.safetyParam = 73
       ret.wheelbase = 2.82448
@@ -196,7 +200,6 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate in [CAR.COROLLA_TSS2, CAR.COROLLAH_TSS2]:
       stop_and_go = True
-      ret.minSpeedCan = 0.375
       ret.safetyParam = 73
       ret.wheelbase = 2.63906
       ret.steerRatio = 13.9
@@ -258,14 +261,18 @@ class CarInterface(CarInterfaceBase):
     elif candidate == CAR.PRIUS_TSS2:
       stop_and_go = True
       ret.safetyParam = 73
-      ret.wheelbase = 2.70002  # from toyota online sepc.
+      ret.wheelbase = 2.70002 #from toyota online sepc.
       ret.steerRatio = 13.4   # True steerRation from older prius
       tire_stiffness_factor = 0.6371   # hand-tune
       ret.mass = 3115. * CV.LB_TO_KG + STD_CARGO_KG
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.35], [0.15]]
       ret.lateralTuning.pid.kf = 0.00007818594
 
-    ret.steerRateCost = 0.5
+    ret.steerRateCost = 1.
+    
+    if zss:
+      ret.steerRateCost = 0.5
+
     ret.centerToFront = ret.wheelbase * 0.44
 
     # TODO: get actual value, for now starting with reasonable value for
@@ -294,8 +301,8 @@ class CarInterface(CarInterfaceBase):
     ret.minEnableSpeed = -1. if (stop_and_go or ret.enableGasInterceptor) else 19. * CV.MPH_TO_MS
 
     # removing the DSU disables AEB and it's considered a community maintained feature
-    # intercepting the DSU is a community feature since it requires unofficial hardware
-    ret.communityFeature = ret.enableGasInterceptor or ret.enableDsu or smartDsu
+    # intercepting the DSU, Comma Pedal, or using a ZSS is a community feature since it requires unofficial hardware
+    ret.communityFeature = ret.enableGasInterceptor or ret.enableDsu or smartDsu or zss
 
     ret.longitudinalTuning.deadzoneBP = [0., 9.]
     ret.longitudinalTuning.deadzoneV = [0., .15]
