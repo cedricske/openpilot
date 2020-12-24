@@ -4,7 +4,7 @@ from opendbc.can.can_define import CANDefine
 from selfdrive.car.interfaces import CarStateBase
 from opendbc.can.parser import CANParser
 from selfdrive.config import Conversions as CV
-from selfdrive.car.toyota.values import CAR, DBC, STEER_THRESHOLD, TSS2_CAR, NO_DSU_CAR, NO_STOP_TIMER_CAR
+from selfdrive.car.toyota.values import CAR, DBC, STEER_THRESHOLD, RAV4
 
 
 class CarState(CarStateBase):
@@ -40,7 +40,7 @@ class CarState(CarStateBase):
 
     ret.standstill = ret.vEgoRaw < 0.001
 
-    if self.CP.carFingerprint in TSS2_CAR:
+    if self.CP.carFingerprint in RAV4:
       ret.steeringAngle = cp.vl["STEER_TORQUE_SENSOR"]['STEER_ANGLE']
     elif True:
       # cp.vl["STEER_TORQUE_SENSOR"]['STEER_ANGLE'] is zeroed to where the steering angle is at start.
@@ -151,7 +151,7 @@ class CarState(CarStateBase):
       signals.append(("LOW_SPEED_LOCKOUT", "PCM_CRUISE_2", 0))
       checks.append(("PCM_CRUISE_2", 33))
 
-    if CP.carFingerprint in NO_DSU_CAR:
+    if CP.carFingerprint in RAV4:
       signals += [("STEER_ANGLE", "STEER_TORQUE_SENSOR", 0)]
 
     if True:
